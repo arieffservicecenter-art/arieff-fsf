@@ -4,7 +4,7 @@
  * Website : https://www.arieffservicecenter.com
  * Author  : Free Support Files (FSF)
  * Proteksi: uBlock Origin (Basic, Optimal, Complete) & AdGuard
- * Sistem  : 100% Mandiri (CSS & Modal Di-inject Otomatis dari JS)
+ * Sistem  : (Kepo Ya wkwkwkwwk)
  * =========================================================
  */
 (function () {
@@ -171,7 +171,7 @@
 
     modal.innerHTML = `
       <div class="fsf-box">
-        <img alt="ASC Logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj2cx-0E7wQjvwXlsuSC-gf5IL8PZwv_H5jDwMK7tt01WQty06yt33m2Imw4xDNzHHlnsNN1yF-xyglZY2LFRquFhFk2SCW6EzM8QT1cD_NLVRsBxdGxgvyIDrYc8aWILnDZDsLZgmPOtJD00rS77nBqzv5_RIX2cCS0_KKQpeyHTBXmiji1u9jYLVBoAk/s861/asc.png"/>
+        <img alt="Free Logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhbCAMta_OL9Q1akGZ2vTfT5nfgxoTr6XPDOaeXPOCWcIl7HcFqJjrowgyn5EA9Icvzy7UGKKrmQtPbt5wN2nenUxN7BU65CBUk1NYYNOBvM4AYZXakaQAN8sqlTDzDMyjIJSP9RLx1YJ61BjtYeqpyj7POUvzuQGUrUrfUAT8d5N4kvXUOcnOndrglQsg/s2172/Free%20Support%20Files.webp"/>
         <div class="fsf-title">Ad Blocker Detected!!</div>
         <div class="fsf-text">Please turn off your AdBlock to access<br/>this website.</div>
         <button class="fsf-btn" onclick="location.reload()">I've Turned It Off</button>
