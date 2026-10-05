@@ -171,7 +171,7 @@
 
     modal.innerHTML = `
       <div class="fsf-box">
-        <img alt="Free Logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhbCAMta_OL9Q1akGZ2vTfT5nfgxoTr6XPDOaeXPOCWcIl7HcFqJjrowgyn5EA9Icvzy7UGKKrmQtPbt5wN2nenUxN7BU65CBUk1NYYNOBvM4AYZXakaQAN8sqlTDzDMyjIJSP9RLx1YJ61BjtYeqpyj7POUvzuQGUrUrfUAT8d5N4kvXUOcnOndrglQsg/s2172/Free%20Support%20Files.webp"/>
+        <img alt="Free Logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvSeS5URV0kvay4Y8xR0VGLgEfjsvtNnfqVTCNeAaufb11mcvD5V5g1gsE8UyjofUunaoTgthsRZ_lIfW4aQBDafd5QO2fnFOqrgGOtFH-ATu1MFTw2GWuyjsUsQb3B8ZugZFTD3uWWTc2OPdYw5SqK0BYJ8qDDTgsHmb8xhP95cPjyvN6RvuuXQ6GcPA/s866/Free_Support_Files.png"/>
         <div class="fsf-title">Ad Blocker Detected!!</div>
         <div class="fsf-text">Please turn off your AdBlock to access<br/>this website.</div>
         <button class="fsf-btn" onclick="location.reload()">I've Turned It Off</button>
@@ -201,39 +201,65 @@
   window.fsfBlock = fsfBlock;
 
   function fakeAds() {
-    if (isBlockedState) return;
+  if (isBlockedState) return;
 
-    var bait = document.createElement('div');
-    bait.className = 'ad-banner adsbox banner_ad ad-placement doubleclick pub_300x250 pub_300x250m pub_728x90 text-ad adsbygoogle';
-    bait.setAttribute('aria-hidden', 'true');
-    bait.style.cssText = 'position:absolute !important; top:-9999px !important; left:-9999px !important; width:100px !important; height:50px !important; display:block !important; pointer-events:none !important;';
-    bait.innerHTML = '&nbsp;';
+  var bait = document.createElement('div');
 
-    (document.body || document.documentElement).appendChild(bait);
+  bait.className =
+    'ad ads ad-banner adsbox ad-container ' +
+    'ad-placement banner-ad banner_ad ' +
+    'advertisement text-ad pub_300x250';
 
-    setTimeout(function () {
-      var detected = false;
-      try {
-        var computed = window.getComputedStyle(bait);
-        if (
-          computed.display === 'none' ||
-          computed.visibility === 'hidden' ||
-          computed.opacity === '0' ||
-          bait.offsetHeight === 0 ||
-          bait.clientHeight === 0 ||
-          bait.offsetParent === null
-        ) {
-          detected = true;
-        }
-      } catch (e) {}
+  bait.setAttribute('aria-hidden', 'true');
 
-      bait.remove();
+  bait.style.cssText =
+    'position:absolute!important;' +
+    'top:-9999px!important;' +
+    'left:-9999px!important;' +
+    'width:300px!important;' +
+    'height:250px!important;' +
+    'display:block!important;' +
+    'visibility:visible!important;' +
+    'opacity:1!important;' +
+    'pointer-events:none!important;';
 
-      if (detected) {
-        fsfBlock();
+  bait.innerHTML = '&nbsp;';
+
+  (document.body || document.documentElement).appendChild(bait);
+
+  setTimeout(function () {
+    if (!bait || !bait.parentNode) {
+      fsfBlock();
+      return;
+    }
+
+    var detected = false;
+
+    try {
+      var computed = window.getComputedStyle(bait);
+
+      if (
+        computed.display === 'none' ||
+        computed.visibility === 'hidden' ||
+        computed.opacity === '0' ||
+        bait.offsetWidth === 0 ||
+        bait.offsetHeight === 0 ||
+        bait.clientWidth === 0 ||
+        bait.clientHeight === 0
+      ) {
+        detected = true;
       }
-    }, 180);
-  }
+    } catch (e) {
+      detected = false;
+    }
+
+    bait.remove();
+
+    if (detected) {
+      fsfBlock();
+    }
+  }, 300);
+}
 
   function checkNetwork() {
     if (isBlockedState) return;
