@@ -30,7 +30,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        background: #0b0f19 !important;
+        background: transparent !important;
         z-index: 999999999 !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         overflow: hidden !important;
