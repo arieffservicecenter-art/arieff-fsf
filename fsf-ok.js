@@ -1,27 +1,30 @@
 /**
  * =========================================================
- * Script Anti-AdBlock All-in-One by arieffservicecenter.com
+ * Script Anti-AdBlock v2.1.0 (SEO & AdSense Friendly)
  * Website : https://www.arieffservicecenter.com
  * Author  : Free Support Files (FSF)
  * Proteksi: uBlock Origin (Basic, Optimal, Complete) & AdGuard
- * Sistem  : (Kepo Ya wkwkwkwwk)
+ * Update  : Kepo Ya wkwkwkwkwkwkkw
  * =========================================================
  */
 (function () {
   'use strict';
 
-  var MODAL_ID = 'fsf-adblock';
+  var MODAL_ID    = 'fsf-adblock';
+  var STYLE_ID    = 'fsf-adblock-styles';
   var isBlockedState = false;
+  var observer    = null;
+
+  var BOT_RE = /bot|crawl|spider|slurp|googlebot|bingbot|yandex|baiduspider|duckduckbot|facebookexternalhit|ia_archiver|semrush|ahrefs|mj12bot|petalbot|applebot|whatsapp|telegram|linkedinbot|twitterbot|pinterest|discordbot|embedly|quora link preview|W3C_Validator|Lighthouse|PageSpeed/i;
+  if (BOT_RE.test(navigator.userAgent || '')) return;
 
   function injectStyles() {
-    if (document.getElementById('fsf-adblock-styles')) return;
+    if (document.getElementById(STYLE_ID)) return;
 
     var css = `
       #${MODAL_ID} {
         position: fixed !important;
         inset: 0 !important;
-        top: 0 !important;
-        left: 0 !important;
         width: 100% !important;
         height: 100% !important;
         display: none;
@@ -35,30 +38,24 @@
         overscroll-behavior: none !important;
       }
       #${MODAL_ID}:before {
-        content: "";
-        position: absolute;
-        width: 800px;
-        height: 800px;
+        content: ""; position: absolute;
+        width: 800px; height: 800px;
         background: radial-gradient(circle, #00e5ff, transparent 60%);
-        opacity: .14;
-        left: -200px;
-        top: -100px;
+        opacity: .14; left: -200px; top: -100px;
         animation: fsfLight 12s infinite alternate;
+        will-change: transform; pointer-events: none;
       }
       #${MODAL_ID}:after {
-        content: "";
-        position: absolute;
-        width: 800px;
-        height: 800px;
+        content: ""; position: absolute;
+        width: 800px; height: 800px;
         background: radial-gradient(circle, #ff00cc, transparent 60%);
-        opacity: .14;
-        right: -200px;
-        bottom: -100px;
+        opacity: .14; right: -200px; bottom: -100px;
         animation: fsfLight 10s infinite alternate;
+        will-change: transform; pointer-events: none;
       }
       @keyframes fsfLight {
         from { transform: translateY(-40px); }
-        to { transform: translateY(40px); }
+        to   { transform: translateY(40px); }
       }
       .fsf-box {
         position: relative;
@@ -77,12 +74,13 @@
         z-index: 10 !important;
       }
       @keyframes fsfPop {
-        0% { transform: scale(.75); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
+        0%   { transform: scale(.75); opacity: 0; }
+        100% { transform: scale(1);   opacity: 1; }
       }
       .fsf-box img {
         width: 240px !important;
         max-width: 80% !important;
+        height: auto !important;
         margin: 0 auto 18px auto !important;
         display: block !important;
         animation: fsfFloat 3s ease-in-out infinite !important;
@@ -90,74 +88,58 @@
       }
       @keyframes fsfFloat {
         0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
+        50%      { transform: translateY(-8px); }
       }
       .fsf-title {
-        font-size: 24px !important;
-        font-weight: 700 !important;
-        margin: 0 0 10px 0 !important;
-        color: #ffffff !important;
+        font-size: 24px !important; font-weight: 700 !important;
+        margin: 0 0 10px 0 !important; color: #ffffff !important;
         letter-spacing: -0.5px !important;
       }
       .fsf-text {
-        font-size: 14.5px !important;
-        color: #94a3b8 !important;
-        line-height: 1.6 !important;
-        margin: 0 0 24px 0 !important;
+        font-size: 14.5px !important; color: #94a3b8 !important;
+        line-height: 1.6 !important; margin: 0 0 24px 0 !important;
       }
       .fsf-btn {
         background: linear-gradient(135deg, #00e5ff, #ff00cc) !important;
-        color: #ffffff !important;
-        padding: 13px 32px !important;
-        border: none !important;
-        border-radius: 12px !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        cursor: pointer !important;
-        transition: .3s !important;
+        color: #ffffff !important; padding: 13px 32px !important;
+        border: none !important; border-radius: 12px !important;
+        font-size: 15px !important; font-weight: 600 !important;
+        cursor: pointer !important; transition: .3s !important;
         box-shadow: 0 0 25px rgba(255, 0, 204, .4) !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
+        width: 100% !important; box-sizing: border-box !important;
       }
       .fsf-btn:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 0 35px rgba(0, 229, 255, .7) !important;
       }
       .fsf-progress {
-        width: 100% !important;
-        height: 5px !important;
-        background: #1e293b !important;
-        border-radius: 20px !important;
-        margin-top: 18px !important;
-        overflow: hidden !important;
+        width: 100% !important; height: 5px !important;
+        background: #1e293b !important; border-radius: 20px !important;
+        margin-top: 18px !important; overflow: hidden !important;
       }
       .fsf-progress-bar {
-        width: 100% !important;
-        height: 100% !important;
+        width: 100% !important; height: 100% !important;
         background: linear-gradient(90deg, #00e5ff, #ff00cc) !important;
         animation: fsfProgress 4s linear infinite !important;
       }
       @keyframes fsfProgress {
-        0% { transform: translateX(-100%); }
+        0%   { transform: translateX(-100%); }
         100% { transform: translateX(100%); }
       }
       .fsf-particle {
-        position: absolute;
-        width: 4px;
-        height: 4px;
-        background: #00e5ff;
-        border-radius: 50%;
-        opacity: .5;
+        position: absolute; width: 4px; height: 4px;
+        background: #00e5ff; border-radius: 50%; opacity: .5;
         animation: fsfParticle 10s linear infinite;
+        pointer-events: none;
       }
       @keyframes fsfParticle {
         from { transform: translateY(100vh); }
-        to { transform: translateY(-10vh); }
+        to   { transform: translateY(-10vh); }
       }
     `;
 
     var styleEl = document.createElement('style');
-    styleEl.id = 'fsf-adblock-styles';
+    styleEl.id = STYLE_ID;
     styleEl.textContent = css;
     (document.head || document.documentElement).appendChild(styleEl);
   }
@@ -167,15 +149,23 @@
 
     var modal = document.createElement('div');
     modal.id = MODAL_ID;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'fsf-adblock-title');
+    modal.setAttribute('aria-hidden', 'true');
     modal.style.display = 'none';
 
     modal.innerHTML = `
       <div class="fsf-box">
-        <img alt="Free Logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvSeS5URV0kvay4Y8xR0VGLgEfjsvtNnfqVTCNeAaufb11mcvD5V5g1gsE8UyjofUunaoTgthsRZ_lIfW4aQBDafd5QO2fnFOqrgGOtFH-ATu1MFTw2GWuyjsUsQb3B8ZugZFTD3uWWTc2OPdYw5SqK0BYJ8qDDTgsHmb8xhP95cPjyvN6RvuuXQ6GcPA/s866/Free_Support_Files.png"/>
-        <div class="fsf-title">Ad Blocker Detected!!</div>
+        <img
+          alt="Free Support Files"
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvSeS5URV0kvay4Y8xR0VGLgEfjsvtNnfqVTCNeAaufb11mcvD5V5g1gsE8UyjofUunaoTgthsRZ_lIfW4aQBDafd5QO2fnFOqrgGOtFH-ATu1MFTw2GWuyjsUsQb3B8ZugZFTD3uWWTc2OPdYw5SqK0BYJ8qDDTgsHmb8xhP95cPjyvN6RvuuXQ6GcPA/s866/Free_Support_Files.png"
+          width="240" height="80"
+          loading="lazy" decoding="async" />
+        <div class="fsf-title" id="fsf-adblock-title">Ad Blocker Detected!!</div>
         <div class="fsf-text">Please turn off your AdBlock to access<br/>this website.</div>
-        <button class="fsf-btn" onclick="location.reload()">I've Turned It Off</button>
-        <div class="fsf-progress"><div class="fsf-progress-bar"></div></div>
+        <button type="button" class="fsf-btn" data-fsf-action="reload">I've Turned It Off</button>
+        <div class="fsf-progress" aria-hidden="true"><div class="fsf-progress-bar"></div></div>
       </div>
       <div class="fsf-particle" style="left:12%"></div>
       <div class="fsf-particle" style="left:28%"></div>
@@ -184,10 +174,16 @@
       <div class="fsf-particle" style="left:88%"></div>
     `;
 
+    modal.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('[data-fsf-action="reload"]');
+      if (btn) location.reload();
+    });
+
     (document.body || document.documentElement).appendChild(modal);
   }
 
   function fsfBlock() {
+    if (isBlockedState) return;
     isBlockedState = true;
     injectStyles();
     injectModal();
@@ -195,119 +191,118 @@
     var modal = document.getElementById(MODAL_ID);
     if (modal) {
       modal.style.setProperty('display', 'flex', 'important');
+      modal.setAttribute('aria-hidden', 'false');
     }
   }
 
   window.fsfBlock = fsfBlock;
 
   function fakeAds() {
-  if (isBlockedState) return;
+    if (isBlockedState) return;
 
-  var bait = document.createElement('div');
+    var bait = document.createElement('div');
+    bait.className =
+      'ad ads ad-banner adsbox ad-container ' +
+      'ad-placement banner-ad banner_ad ' +
+      'advertisement text-ad pub_300x250';
+    bait.setAttribute('aria-hidden', 'true');
+    bait.style.cssText =
+      'position:absolute!important;top:-9999px!important;left:-9999px!important;' +
+      'width:300px!important;height:250px!important;display:block!important;' +
+      'visibility:visible!important;opacity:1!important;pointer-events:none!important;';
+    bait.innerHTML = '&nbsp;';
 
-  bait.className =
-    'ad ads ad-banner adsbox ad-container ' +
-    'ad-placement banner-ad banner_ad ' +
-    'advertisement text-ad pub_300x250';
+    (document.body || document.documentElement).appendChild(bait);
 
-  bait.setAttribute('aria-hidden', 'true');
+    setTimeout(function () {
+      if (!bait || !bait.parentNode) { fsfBlock(); return; }
 
-  bait.style.cssText =
-    'position:absolute!important;' +
-    'top:-9999px!important;' +
-    'left:-9999px!important;' +
-    'width:300px!important;' +
-    'height:250px!important;' +
-    'display:block!important;' +
-    'visibility:visible!important;' +
-    'opacity:1!important;' +
-    'pointer-events:none!important;';
+      var detected = false;
+      try {
+        var c = window.getComputedStyle(bait);
+        if (
+          c.display === 'none' ||
+          c.visibility === 'hidden' ||
+          c.opacity === '0' ||
+          bait.offsetWidth === 0 ||
+          bait.offsetHeight === 0 ||
+          bait.clientWidth === 0 ||
+          bait.clientHeight === 0
+        ) detected = true;
+      } catch (e) {}
 
-  bait.innerHTML = '&nbsp;';
-
-  (document.body || document.documentElement).appendChild(bait);
-
-  setTimeout(function () {
-    if (!bait || !bait.parentNode) {
-      fsfBlock();
-      return;
-    }
-
-    var detected = false;
-
-    try {
-      var computed = window.getComputedStyle(bait);
-
-      if (
-        computed.display === 'none' ||
-        computed.visibility === 'hidden' ||
-        computed.opacity === '0' ||
-        bait.offsetWidth === 0 ||
-        bait.offsetHeight === 0 ||
-        bait.clientWidth === 0 ||
-        bait.clientHeight === 0
-      ) {
-        detected = true;
-      }
-    } catch (e) {
-      detected = false;
-    }
-
-    bait.remove();
-
-    if (detected) {
-      fsfBlock();
-    }
-  }, 300);
-}
+      bait.remove();
+      if (detected) fsfBlock();
+    }, 300);
+  }
 
   function checkNetwork() {
     if (isBlockedState) return;
 
+    if (window.adsbygoogle && (window.adsbygoogle.loaded || window.adsbygoogle.length >= 0)) return;
+    if (window.googletag && window.googletag.apiReady) return;
+
     try {
       var adImg = new Image();
       adImg.onerror = function () {
+        if (window.adsbygoogle && window.adsbygoogle.loaded) return;
         fsfBlock();
       };
       adImg.src = 'https://ad.doubleclick.net/ddm/trackimp/N123?' + Date.now();
     } catch (e) {}
 
     try {
-      fetch(new Request('https://securepubads.g.doubleclick.net/gampad/ads?gdfp_req=1', {
-        method: 'HEAD',
-        mode: 'no-cors',
-        cache: 'no-store'
-      })).catch(function () {
+      fetch(new Request(
+        'https://securepubads.g.doubleclick.net/gampad/ads?gdfp_req=1',
+        { method: 'HEAD', mode: 'no-cors', cache: 'no-store' }
+      )).catch(function () {
+        if (window.adsbygoogle && window.adsbygoogle.loaded) return;
         fsfBlock();
       });
     } catch (e) {}
   }
 
   function protectSelf() {
-    if (typeof MutationObserver !== 'undefined' && document.body) {
-      var observer = new MutationObserver(function () {
-        if (isBlockedState) {
-          var m = document.getElementById(MODAL_ID);
-          if (!m) {
-            injectModal();
-            var newM = document.getElementById(MODAL_ID);
-            if (newM) newM.style.setProperty('display', 'flex', 'important');
-          } else if (m.style.display !== 'flex') {
-            m.style.setProperty('display', 'flex', 'important');
-          }
-        }
-      });
+    if (typeof MutationObserver === 'undefined' || !document.body) return;
 
-      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-    }
+    var queued = false;
+    observer = new MutationObserver(function () {
+      if (!isBlockedState || queued) return;
+      queued = true;
+      setTimeout(function () {
+        queued = false;
+        var m = document.getElementById(MODAL_ID);
+        if (!m) {
+          injectModal();
+          var newM = document.getElementById(MODAL_ID);
+          if (newM) {
+            newM.style.setProperty('display', 'flex', 'important');
+            newM.setAttribute('aria-hidden', 'false');
+          }
+        } else if (m.style.display !== 'flex') {
+          m.style.setProperty('display', 'flex', 'important');
+        }
+      }, 60);
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true, attributes: false });
   }
 
   function init() {
     injectStyles();
-    fakeAds();
-    checkNetwork();
-    protectSelf();
-    setInterval(fakeAds, 4000);
+
+    var runDetection = function () {
+      fakeAds();
+      checkNetwork();
+      protectSelf();
+      setInterval(fakeAds, 5000);
+    };
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(runDetection, { timeout: 2500 });
+    } else {
+      setTimeout(runDetection, 1500);
+    }
   }
 
   if (document.readyState === 'loading') {
