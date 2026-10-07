@@ -1,6 +1,6 @@
 /**
  * =========================================================
- * Script Anti-AdBlock v2.1.3 (SEO & AdSense Friendly)
+ * Script Anti-AdBlock v2.1.4 (SEO & AdSense Friendly)
  * Website : https://www.arieffservicecenter.com
  * Author  : Free Support Files (FSF)
  * Proteksi: uBlock Origin (Basic, Optimal, Complete) & AdGuard
@@ -18,6 +18,8 @@
     message: 'This website is free thanks to advertising. Please turn off your ad blocker for this site, then reload the page.',
     hint: 'Thank You.',
     button: "I've Turned It Off",
+    overlayBackground: 'transparent',
+    overlayBlur: 2,
     cacheMinutes: 0,
     cacheKey: 'fsf_ab_clean',
     baitChecks: [150, 400, 800, 1500, 2500],
@@ -190,8 +192,9 @@
     if (document.getElementById(CONFIG.styleId)) return;
 
     var id = '#' + CONFIG.modalId;
+    var blurRule = CONFIG.overlayBlur ? '-webkit-backdrop-filter:blur(' + CONFIG.overlayBlur + 'px);backdrop-filter:blur(' + CONFIG.overlayBlur + 'px);' : '';
     var css = [
-      id + '{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.9)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);z-index:2147483647!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden!important;overscroll-behavior:none;touch-action:none;margin:0;padding:0}',
+      id + '{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:none;align-items:center;justify-content:center;background:' + CONFIG.overlayBackground + '!important;' + blurRule + 'z-index:2147483647!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden!important;overscroll-behavior:none;touch-action:none;margin:0;padding:0}',
       id + '.fsf-show{display:flex!important;visibility:visible!important;opacity:1!important}',
       id + ':before,' + id + ':after{content:"";position:absolute;width:700px;height:700px;max-width:90vw;max-height:90vw;border-radius:50%;opacity:.14;pointer-events:none}',
       id + ':before{background:radial-gradient(circle,#00e5ff,transparent 60%);left:-15%;top:-10%;animation:fsf-drift 12s ease-in-out infinite alternate}',
