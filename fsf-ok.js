@@ -10,304 +10,341 @@
 (function () {
   'use strict';
 
-  var MODAL_ID    = 'fsf-adblock';
-  var STYLE_ID    = 'fsf-adblock-styles';
-  var isBlockedState = false;
-  var observer    = null;
+  var CONFIG = {
+    modalId: 'fsf-adblock',
+    styleId: 'fsf-adblock-styles',
+    logo: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvSeS5URV0kvay4Y8xR0VGLgEfjsvtNnfqVTCNeAaufb11mcvD5V5g1gsE8UyjofUunaoTgthsRZ_lIfW4aQBDafd5QO2fnFOqrgGOtFH-ATu1MFTw2GWuyjsUsQb3B8ZugZFTD3uWWTc2OPdYw5SqK0BYJ8qDDTgsHmb8xhP95cPjyvN6RvuuXQ6GcPA/s866/Free_Support_Files.png',
+    title: 'Ad Blocker Detected',
+    message: 'This website is free thanks to advertising. Please turn off your ad blocker for this site, then reload the page.',
+    hint: 'Thank You.',
+    button: "I've Turned It Off",
+    cacheMinutes: 10,
+    cacheKey: 'fsf_ab_clean',
+    baitChecks: [150, 400, 800, 1500, 2500],
+    probeTimeout: 6000,
+    probeFailThreshold: 2,
+    control: 'https://www.gstatic.com/generate_204',
+    probes: [
+      'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
+      'https://googleads.g.doubleclick.net/pagead/id',
+      'https://securepubads.g.doubleclick.net/tag/js/gpt.js',
+      'https://static.doubleclick.net/instream/ad_status.js'
+    ]
+  };
 
-  var BOT_RE = /bot|crawl|spider|slurp|googlebot|bingbot|yandex|baiduspider|duckduckbot|facebookexternalhit|ia_archiver|semrush|ahrefs|mj12bot|petalbot|applebot|whatsapp|telegram|linkedinbot|twitterbot|pinterest|discordbot|embedly|quora link preview|W3C_Validator|Lighthouse|PageSpeed/i;
-  if (BOT_RE.test(navigator.userAgent || '')) return;
+  var BOT_RE = /bot|crawl|spider|slurp|mediapartners|adsbot|googleother|inspectiontool|read-aloud|storebot|apis-google|feedfetcher|lighthouse|pagespeed|gtmetrix|pingdom|headless|phantomjs|yandex|baidu|duckduck|bingpreview|facebookexternalhit|ia_archiver|semrush|ahrefs|mj12|petalbot|applebot|whatsapp\/|pinterest\/|embedly|quora link preview|w3c_validator|validator/i;
 
-  function injectStyles() {
-    if (document.getElementById(STYLE_ID)) return;
+  var ua = '';
+  try { ua = navigator.userAgent || ''; } catch (e) {}
+  if (BOT_RE.test(ua)) return;
+  try { if (navigator.webdriver === true) return; } catch (e) {}
 
-    var css = `
-      #${MODAL_ID} {
-        position: fixed !important;
-        inset: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        background: transparent !important;
-        z-index: 999999999 !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        overflow: hidden !important;
-        touch-action: none !important;
-        overscroll-behavior: none !important;
-      }
-      #${MODAL_ID}:before {
-        content: ""; position: absolute;
-        width: 800px; height: 800px;
-        background: radial-gradient(circle, #00e5ff, transparent 60%);
-        opacity: .14; left: -200px; top: -100px;
-        animation: fsfLight 12s infinite alternate;
-        will-change: transform; pointer-events: none;
-      }
-      #${MODAL_ID}:after {
-        content: ""; position: absolute;
-        width: 800px; height: 800px;
-        background: radial-gradient(circle, #ff00cc, transparent 60%);
-        opacity: .14; right: -200px; bottom: -100px;
-        animation: fsfLight 10s infinite alternate;
-        will-change: transform; pointer-events: none;
-      }
-      @keyframes fsfLight {
-        from { transform: translateY(-40px); }
-        to   { transform: translateY(40px); }
-      }
-      .fsf-box {
-        position: relative;
-        background: rgba(15, 23, 42, .88) !important;
-        backdrop-filter: blur(24px) !important;
-        -webkit-backdrop-filter: blur(24px) !important;
-        border: 1px solid rgba(255, 255, 255, .12) !important;
-        padding: 44px 28px !important;
-        border-radius: 24px !important;
-        text-align: center !important;
-        max-width: 440px !important;
-        width: 90% !important;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, .6), 0 0 40px rgba(0, 229, 255, .2) !important;
-        animation: fsfPop .5s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        box-sizing: border-box !important;
-        z-index: 10 !important;
-      }
-      @keyframes fsfPop {
-        0%   { transform: scale(.75); opacity: 0; }
-        100% { transform: scale(1);   opacity: 1; }
-      }
-      .fsf-box img {
-        width: 240px !important;
-        max-width: 80% !important;
-        height: auto !important;
-        margin: 0 auto 18px auto !important;
-        display: block !important;
-        animation: fsfFloat 3s ease-in-out infinite !important;
-        filter: drop-shadow(0 0 18px #00e5ff) !important;
-      }
-      @keyframes fsfFloat {
-        0%, 100% { transform: translateY(0); }
-        50%      { transform: translateY(-8px); }
-      }
-      .fsf-title {
-        font-size: 24px !important; font-weight: 700 !important;
-        margin: 0 0 10px 0 !important; color: #ffffff !important;
-        letter-spacing: -0.5px !important;
-      }
-      .fsf-text {
-        font-size: 14.5px !important; color: #94a3b8 !important;
-        line-height: 1.6 !important; margin: 0 0 24px 0 !important;
-      }
-      .fsf-btn {
-        background: linear-gradient(135deg, #00e5ff, #ff00cc) !important;
-        color: #ffffff !important; padding: 13px 32px !important;
-        border: none !important; border-radius: 12px !important;
-        font-size: 15px !important; font-weight: 600 !important;
-        cursor: pointer !important; transition: .3s !important;
-        box-shadow: 0 0 25px rgba(255, 0, 204, .4) !important;
-        width: 100% !important; box-sizing: border-box !important;
-      }
-      .fsf-btn:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 0 35px rgba(0, 229, 255, .7) !important;
-      }
-      .fsf-progress {
-        width: 100% !important; height: 5px !important;
-        background: #1e293b !important; border-radius: 20px !important;
-        margin-top: 18px !important; overflow: hidden !important;
-      }
-      .fsf-progress-bar {
-        width: 100% !important; height: 100% !important;
-        background: linear-gradient(90deg, #00e5ff, #ff00cc) !important;
-        animation: fsfProgress 4s linear infinite !important;
-      }
-      @keyframes fsfProgress {
-        0%   { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-      }
-      .fsf-particle {
-        position: absolute; width: 4px; height: 4px;
-        background: #00e5ff; border-radius: 50%; opacity: .5;
-        animation: fsfParticle 10s linear infinite;
-        pointer-events: none;
-      }
-      @keyframes fsfParticle {
-        from { transform: translateY(100vh); }
-        to   { transform: translateY(-10vh); }
-      }
-    `;
+  var blocked = false;
+  var started = false;
+  var observer = null;
+  var attrObserver = null;
+  var queued = false;
 
-    var styleEl = document.createElement('style');
-    styleEl.id = STYLE_ID;
-    styleEl.textContent = css;
-    (document.head || document.documentElement).appendChild(styleEl);
+  function wait(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
   }
 
-  function injectModal() {
-    if (document.getElementById(MODAL_ID)) return;
-
-    var modal = document.createElement('div');
-    modal.id = MODAL_ID;
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-labelledby', 'fsf-adblock-title');
-    modal.setAttribute('aria-hidden', 'true');
-    modal.style.display = 'none';
-
-    modal.innerHTML = `
-      <div class="fsf-box">
-        <img
-          alt="Free Support Files"
-          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjvSeS5URV0kvay4Y8xR0VGLgEfjsvtNnfqVTCNeAaufb11mcvD5V5g1gsE8UyjofUunaoTgthsRZ_lIfW4aQBDafd5QO2fnFOqrgGOtFH-ATu1MFTw2GWuyjsUsQb3B8ZugZFTD3uWWTc2OPdYw5SqK0BYJ8qDDTgsHmb8xhP95cPjyvN6RvuuXQ6GcPA/s866/Free_Support_Files.png"
-          width="240" height="80"
-          loading="lazy" decoding="async" />
-        <div class="fsf-title" id="fsf-adblock-title">Ad Blocker Detected!!</div>
-        <div class="fsf-text">Please turn off your AdBlock to access<br/>this website.</div>
-        <button type="button" class="fsf-btn" data-fsf-action="reload">I've Turned It Off</button>
-        <div class="fsf-progress" aria-hidden="true"><div class="fsf-progress-bar"></div></div>
-      </div>
-      <div class="fsf-particle" style="left:12%"></div>
-      <div class="fsf-particle" style="left:28%"></div>
-      <div class="fsf-particle" style="left:48%"></div>
-      <div class="fsf-particle" style="left:68%"></div>
-      <div class="fsf-particle" style="left:88%"></div>
-    `;
-
-    modal.addEventListener('click', function (e) {
-      var btn = e.target.closest && e.target.closest('[data-fsf-action="reload"]');
-      if (btn) location.reload();
-    });
-
-    (document.body || document.documentElement).appendChild(modal);
+  function storageGet(key) {
+    try { return window.sessionStorage.getItem(key); } catch (e) { return null; }
   }
 
-  function fsfBlock() {
-    if (isBlockedState) return;
-    isBlockedState = true;
-    injectStyles();
-    injectModal();
-
-    var modal = document.getElementById(MODAL_ID);
-    if (modal) {
-      modal.style.setProperty('display', 'flex', 'important');
-      modal.setAttribute('aria-hidden', 'false');
-    }
+  function storageSet(key, value) {
+    try { window.sessionStorage.setItem(key, value); } catch (e) {}
   }
 
-  window.fsfBlock = fsfBlock;
+  function cacheIsFresh() {
+    if (!CONFIG.cacheMinutes) return false;
+    var stamp = parseInt(storageGet(CONFIG.cacheKey), 10);
+    return !!stamp && Date.now() - stamp < CONFIG.cacheMinutes * 60000;
+  }
 
-  function fakeAds() {
-    if (isBlockedState) return;
+  function cacheMarkClean() {
+    if (CONFIG.cacheMinutes) storageSet(CONFIG.cacheKey, String(Date.now()));
+  }
 
-    var bait = document.createElement('div');
-    bait.className =
-      'ad ads ad-banner adsbox ad-container ' +
-      'ad-placement banner-ad banner_ad ' +
-      'advertisement text-ad pub_300x250';
-    bait.setAttribute('aria-hidden', 'true');
-    bait.style.cssText =
-      'position:absolute!important;top:-9999px!important;left:-9999px!important;' +
+  function makeBait(className, id) {
+    var el = document.createElement('div');
+    el.className = className;
+    if (id) el.id = id;
+    el.setAttribute('aria-hidden', 'true');
+    el.style.cssText =
+      'position:absolute!important;left:-10000px!important;top:0!important;' +
       'width:300px!important;height:250px!important;display:block!important;' +
       'visibility:visible!important;opacity:1!important;pointer-events:none!important;';
-    bait.innerHTML = '&nbsp;';
-
-    (document.body || document.documentElement).appendChild(bait);
-
-    setTimeout(function () {
-      if (!bait || !bait.parentNode) { fsfBlock(); return; }
-
-      var detected = false;
-      try {
-        var c = window.getComputedStyle(bait);
-        if (
-          c.display === 'none' ||
-          c.visibility === 'hidden' ||
-          c.opacity === '0' ||
-          bait.offsetWidth === 0 ||
-          bait.offsetHeight === 0 ||
-          bait.clientWidth === 0 ||
-          bait.clientHeight === 0
-        ) detected = true;
-      } catch (e) {}
-
-      bait.remove();
-      if (detected) fsfBlock();
-    }, 300);
+    el.innerHTML = '&nbsp;';
+    return el;
   }
 
-  function checkNetwork() {
-    if (isBlockedState) return;
-
-    if (window.adsbygoogle && (window.adsbygoogle.loaded || window.adsbygoogle.length >= 0)) return;
-    if (window.googletag && window.googletag.apiReady) return;
-
+  function isHidden(el) {
+    if (!el || !el.parentNode || !el.isConnected) return true;
     try {
-      var adImg = new Image();
-      adImg.onerror = function () {
-        if (window.adsbygoogle && window.adsbygoogle.loaded) return;
-        fsfBlock();
-      };
-      adImg.src = 'https://ad.doubleclick.net/ddm/trackimp/N123?' + Date.now();
+      var c = window.getComputedStyle(el);
+      if (c.display === 'none' || c.visibility === 'hidden' || parseFloat(c.opacity) === 0) return true;
     } catch (e) {}
-
-    try {
-      fetch(new Request(
-        'https://securepubads.g.doubleclick.net/gampad/ads?gdfp_req=1',
-        { method: 'HEAD', mode: 'no-cors', cache: 'no-store' }
-      )).catch(function () {
-        if (window.adsbygoogle && window.adsbygoogle.loaded) return;
-        fsfBlock();
-      });
-    } catch (e) {}
+    return el.offsetWidth === 0 || el.offsetHeight === 0 || el.clientHeight === 0;
   }
 
-  function protectSelf() {
-    if (typeof MutationObserver === 'undefined' || !document.body) return;
+  function detectCosmetic() {
+    return new Promise(function (resolve) {
+      if (!document.body) return resolve(false);
 
-    var queued = false;
-    observer = new MutationObserver(function () {
-      if (!isBlockedState || queued) return;
-      queued = true;
-      setTimeout(function () {
-        queued = false;
-        var m = document.getElementById(MODAL_ID);
-        if (!m) {
-          injectModal();
-          var newM = document.getElementById(MODAL_ID);
-          if (newM) {
-            newM.style.setProperty('display', 'flex', 'important');
-            newM.setAttribute('aria-hidden', 'false');
+      var control = makeBait('fsf-bait-control');
+      var baits = [
+        makeBait('adsbox ad-banner ad-placement banner-ad banner_ad ad-container advertisement text-ad textAd pub_300x250 pub_728x90'),
+        makeBait('ad ads ad-slot ad-unit ad-wrapper ad_box sponsored-ad sponsor-ad adbanner', 'ad-banner-top'),
+        makeBait('google-ad google_ads gpt-ad dfp-ad adv-box advert ad-300x250', 'ads-box')
+      ];
+
+      var nodes = [control].concat(baits);
+      nodes.forEach(function (n) { document.body.appendChild(n); });
+
+      function cleanup() {
+        nodes.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+      }
+
+      (async function () {
+        try {
+          for (var i = 0; i < CONFIG.baitChecks.length; i++) {
+            await wait(i === 0 ? CONFIG.baitChecks[0] : CONFIG.baitChecks[i] - CONFIG.baitChecks[i - 1]);
+            if (isHidden(control)) { cleanup(); return resolve(false); }
+            for (var j = 0; j < baits.length; j++) {
+              if (isHidden(baits[j])) { cleanup(); return resolve(true); }
+            }
           }
-        } else if (m.style.display !== 'flex') {
-          m.style.setProperty('display', 'flex', 'important');
-        }
-      }, 60);
+        } catch (e) {}
+        cleanup();
+        resolve(false);
+      })();
+    });
+  }
+
+  function reachable(url) {
+    return new Promise(function (resolve) {
+      var settled = false;
+      var timer = setTimeout(function () { finish(null); }, CONFIG.probeTimeout);
+
+      function finish(value) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      }
+
+      try {
+        fetch(url, {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-store',
+          credentials: 'omit',
+          referrerPolicy: 'no-referrer'
+        }).then(function () { finish(true); }, function () { finish(false); });
+      } catch (e) {
+        finish(null);
+      }
+    });
+  }
+
+  function detectNetwork() {
+    if (typeof fetch !== 'function') return Promise.resolve(false);
+    try { if (navigator.onLine === false) return Promise.resolve(false); } catch (e) {}
+
+    return reachable(CONFIG.control).then(function (ok) {
+      if (ok !== true) return false;
+      return Promise.all(CONFIG.probes.map(reachable)).then(function (results) {
+        var failed = results.filter(function (r) { return r === false; }).length;
+        return failed >= CONFIG.probeFailThreshold;
+      });
+    });
+  }
+
+  function firstTrue(promises) {
+    return new Promise(function (resolve) {
+      var pending = promises.length;
+      promises.forEach(function (p) {
+        p.then(function (value) {
+          if (value) resolve(true);
+          else if (--pending === 0) resolve(false);
+        }, function () {
+          if (--pending === 0) resolve(false);
+        });
+      });
+    });
+  }
+
+  function injectStyles() {
+    if (document.getElementById(CONFIG.styleId)) return;
+
+    var id = '#' + CONFIG.modalId;
+    var css = [
+      id + '{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.9)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);z-index:2147483647!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden!important;overscroll-behavior:none;touch-action:none;margin:0;padding:0}',
+      id + '.fsf-show{display:flex!important;visibility:visible!important;opacity:1!important}',
+      id + ':before,' + id + ':after{content:"";position:absolute;width:700px;height:700px;max-width:90vw;max-height:90vw;border-radius:50%;opacity:.14;pointer-events:none}',
+      id + ':before{background:radial-gradient(circle,#00e5ff,transparent 60%);left:-15%;top:-10%;animation:fsf-drift 12s ease-in-out infinite alternate}',
+      id + ':after{background:radial-gradient(circle,#ff00cc,transparent 60%);right:-15%;bottom:-10%;animation:fsf-drift 10s ease-in-out infinite alternate}',
+      id + ' .fsf-box{position:relative;z-index:1;box-sizing:border-box;width:90%;max-width:440px;max-height:90vh;overflow:auto;padding:40px 28px 32px;text-align:center;background:rgba(15,23,42,.92);border:1px solid rgba(255,255,255,.12);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(0,229,255,.18);animation:fsf-pop .45s cubic-bezier(.16,1,.3,1);outline:none}',
+      id + ' .fsf-logo{display:block;width:220px;max-width:70%;height:auto;margin:0 auto 18px;filter:drop-shadow(0 0 16px rgba(0,229,255,.8))}',
+      id + ' .fsf-title{margin:0 0 10px;font-size:24px;font-weight:700;line-height:1.3;letter-spacing:-.3px;color:#fff}',
+      id + ' .fsf-text{margin:0 0 12px;font-size:14.5px;line-height:1.65;color:#cbd5e1}',
+      id + ' .fsf-hint{margin:0 0 24px;font-size:12.5px;line-height:1.55;color:#94a3b8}',
+      id + ' .fsf-btn{display:block;box-sizing:border-box;width:100%;padding:13px 24px;border:0;border-radius:12px;font:600 15px/1.2 inherit;font-family:inherit;color:#fff;cursor:pointer;background:linear-gradient(135deg,#00b8d4,#d500b0);box-shadow:0 0 22px rgba(255,0,204,.35);transition:transform .2s,box-shadow .2s}',
+      id + ' .fsf-btn:hover,' + id + ' .fsf-btn:focus-visible{transform:translateY(-2px);box-shadow:0 0 32px rgba(0,229,255,.6);outline:2px solid #fff;outline-offset:2px}',
+      id + ' .fsf-progress{height:4px;margin-top:18px;overflow:hidden;border-radius:20px;background:#1e293b}',
+      id + ' .fsf-progress-bar{width:100%;height:100%;background:linear-gradient(90deg,#00e5ff,#ff00cc);animation:fsf-slide 3s linear infinite}',
+      'html.fsf-lock,html.fsf-lock body{overflow:hidden!important}',
+      '@keyframes fsf-drift{from{transform:translateY(-40px)}to{transform:translateY(40px)}}',
+      '@keyframes fsf-pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}',
+      '@keyframes fsf-slide{from{transform:translateX(-100%)}to{transform:translateX(100%)}}',
+      '@media (prefers-reduced-motion:reduce){' + id + ',' + id + ' *,' + id + ':before,' + id + ':after{animation:none!important;transition:none!important}}',
+      '@media (max-width:480px){' + id + ' .fsf-box{padding:32px 20px 24px}' + id + ' .fsf-title{font-size:21px}}'
+    ].join('\n');
+
+    var style = document.createElement('style');
+    style.id = CONFIG.styleId;
+    style.textContent = css;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function node(tag, className, text) {
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text) el.textContent = text;
+    return el;
+  }
+
+  function buildModal() {
+    var modal = node('div');
+    modal.id = CONFIG.modalId;
+    modal.setAttribute('role', 'alertdialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', CONFIG.modalId + '-title');
+    modal.setAttribute('aria-describedby', CONFIG.modalId + '-text');
+
+    var box = node('div', 'fsf-box');
+    box.tabIndex = -1;
+
+    if (CONFIG.logo) {
+      var img = node('img', 'fsf-logo');
+      img.alt = 'Free Support Files';
+      img.width = 220;
+      img.height = 73;
+      img.decoding = 'async';
+      img.src = CONFIG.logo;
+      box.appendChild(img);
+    }
+
+    var title = node('h2', 'fsf-title', CONFIG.title);
+    title.id = CONFIG.modalId + '-title';
+    var text = node('p', 'fsf-text', CONFIG.message);
+    text.id = CONFIG.modalId + '-text';
+    var hint = node('p', 'fsf-hint', CONFIG.hint);
+
+    var btn = node('button', 'fsf-btn', CONFIG.button);
+    btn.type = 'button';
+    btn.addEventListener('click', function () { window.location.reload(); });
+
+    var progress = node('div', 'fsf-progress');
+    progress.setAttribute('aria-hidden', 'true');
+    progress.appendChild(node('div', 'fsf-progress-bar'));
+
+    box.appendChild(title);
+    box.appendChild(text);
+    if (CONFIG.hint) box.appendChild(hint);
+    box.appendChild(btn);
+    box.appendChild(progress);
+    modal.appendChild(box);
+
+    modal.addEventListener('keydown', function (e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        btn.focus();
+      }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true, attributes: false });
+    return modal;
   }
 
-  function init() {
-    injectStyles();
+  function enforce() {
+    var modal = document.getElementById(CONFIG.modalId);
+    var root = document.body || document.documentElement;
 
-    var runDetection = function () {
-      fakeAds();
-      checkNetwork();
-      protectSelf();
-      setInterval(fakeAds, 5000);
-    };
-
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(runDetection, { timeout: 2500 });
-    } else {
-      setTimeout(runDetection, 1500);
+    if (!modal) {
+      modal = buildModal();
+      root.appendChild(modal);
+    } else if (modal.parentNode !== root) {
+      root.appendChild(modal);
     }
+
+    if (modal.className !== 'fsf-show') modal.className = 'fsf-show';
+    if (modal.hasAttribute('style')) modal.removeAttribute('style');
+    if (modal.hasAttribute('hidden')) modal.removeAttribute('hidden');
+    if (!document.documentElement.classList.contains('fsf-lock')) {
+      document.documentElement.classList.add('fsf-lock');
+    }
+
+    if (attrObserver && modal !== attrObserver.target) {
+      attrObserver.disconnect();
+      attrObserver = null;
+    }
+    if (!attrObserver && typeof MutationObserver !== 'undefined') {
+      var watcher = new MutationObserver(schedule);
+      watcher.observe(modal, { attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+      watcher.target = modal;
+      attrObserver = watcher;
+    }
+
+    return modal;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
-  } else {
-    init();
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    var run = function () {
+      queued = false;
+      if (blocked) enforce();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    else setTimeout(run, 50);
   }
+
+  function protect() {
+    if (observer || typeof MutationObserver === 'undefined' || !document.body) return;
+    observer = new MutationObserver(schedule);
+    observer.observe(document.body, { childList: true });
+  }
+
+  function showModal() {
+    if (blocked) return;
+    blocked = true;
+    injectStyles();
+    var modal = enforce();
+    var box = modal.querySelector('.fsf-btn');
+    if (box) { try { box.focus({ preventScroll: true }); } catch (e) { box.focus(); } }
+    protect();
+  }
+
+  window.fsfBlock = showModal;
+
+  function run() {
+    if (started || blocked) return;
+    started = true;
+    if (cacheIsFresh()) return;
+
+    firstTrue([detectCosmetic(), detectNetwork()]).then(function (isBlocked) {
+      if (isBlocked) showModal();
+      else cacheMarkClean();
+    });
+  }
+
+  function whenIdle() {
+    if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 3000 });
+    else setTimeout(run, 1200);
+  }
+
+  if (document.readyState === 'complete') whenIdle();
+  else window.addEventListener('load', whenIdle, { once: true });
 })();
