@@ -1,6 +1,6 @@
 /**
  * =========================================================
- * Script Anti-AdBlock v2.1.0 (SEO & AdSense Friendly)
+ * Script Anti-AdBlock v2.1.3 (SEO & AdSense Friendly)
  * Website : https://www.arieffservicecenter.com
  * Author  : Free Support Files (FSF)
  * Proteksi: uBlock Origin (Basic, Optimal, Complete) & AdGuard
@@ -18,17 +18,19 @@
     message: 'This website is free thanks to advertising. Please turn off your ad blocker for this site, then reload the page.',
     hint: 'Thank You.',
     button: "I've Turned It Off",
-    cacheMinutes: 10,
+    cacheMinutes: 0,
     cacheKey: 'fsf_ab_clean',
     baitChecks: [150, 400, 800, 1500, 2500],
     probeTimeout: 6000,
     probeFailThreshold: 2,
     control: 'https://www.gstatic.com/generate_204',
     probes: [
-      'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
-      'https://googleads.g.doubleclick.net/pagead/id',
-      'https://securepubads.g.doubleclick.net/tag/js/gpt.js',
-      'https://static.doubleclick.net/instream/ad_status.js'
+      'https://pubads.g.doubleclick.net/gampad/ads',
+      'https://googleads.g.doubleclick.net/pagead/ads',
+      'https://tpc.googlesyndication.com/simgad/1',
+      'https://stats.g.doubleclick.net/j/collect',
+      'https://ib.adnxs.com/ut/v3',
+      'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
     ]
   };
 
@@ -38,6 +40,12 @@
   try { ua = navigator.userAgent || ''; } catch (e) {}
   if (BOT_RE.test(ua)) return;
   try { if (navigator.webdriver === true) return; } catch (e) {}
+
+  var DEBUG = /[?&]fsfdebug=1/.test(window.location.search);
+
+  function log() {
+    if (DEBUG && window.console) console.log.apply(console, ['[fsf-adblock]'].concat([].slice.call(arguments)));
+  }
 
   var blocked = false;
   var started = false;
@@ -111,9 +119,9 @@
         try {
           for (var i = 0; i < CONFIG.baitChecks.length; i++) {
             await wait(i === 0 ? CONFIG.baitChecks[0] : CONFIG.baitChecks[i] - CONFIG.baitChecks[i - 1]);
-            if (isHidden(control)) { cleanup(); return resolve(false); }
+            if (isHidden(control)) { log('bait: control hidden, inconclusive'); cleanup(); return resolve(false); }
             for (var j = 0; j < baits.length; j++) {
-              if (isHidden(baits[j])) { cleanup(); return resolve(true); }
+              if (isHidden(baits[j])) { log('bait: hidden', baits[j].className); cleanup(); return resolve(true); }
             }
           }
         } catch (e) {}
@@ -154,9 +162,11 @@
     try { if (navigator.onLine === false) return Promise.resolve(false); } catch (e) {}
 
     return reachable(CONFIG.control).then(function (ok) {
+      log('network: control', ok);
       if (ok !== true) return false;
       return Promise.all(CONFIG.probes.map(reachable)).then(function (results) {
         var failed = results.filter(function (r) { return r === false; }).length;
+        log('network: probes', CONFIG.probes, results, 'failed', failed);
         return failed >= CONFIG.probeFailThreshold;
       });
     });
@@ -332,9 +342,10 @@
   function run() {
     if (started || blocked) return;
     started = true;
-    if (cacheIsFresh()) return;
+    if (!DEBUG && cacheIsFresh()) return;
 
     firstTrue([detectCosmetic(), detectNetwork()]).then(function (isBlocked) {
+      log('result: blocked =', isBlocked);
       if (isBlocked) showModal();
       else cacheMarkClean();
     });
