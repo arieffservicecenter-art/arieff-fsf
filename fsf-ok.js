@@ -1,14 +1,16 @@
 /**
  * =========================================================
- * Script Anti-AdBlock v2.1.4 (SEO & AdSense Friendly)
+ * Script Anti-AdBlock v2.2.0
  * Website : https://www.arieffservicecenter.com
  * Author  : Free Support Files (FSF)
- * Proteksi: uBlock Origin (Basic, Optimal, Complete) & AdGuard
+ * Proteksi: uBlock Origin, AdGuard and Other
  * Update  : Kepo Ya wkwkwkwkwkwkkw
- * =========================================================
+ * ---------------------------------------------------------
  */
 (function () {
   'use strict';
+
+  try { if (window.top !== window.self) return; } catch (e) { return; }
 
   var CONFIG = {
     modalId: 'fsf-adblock',
@@ -19,12 +21,13 @@
     hint: 'Thank You.',
     button: "I've Turned It Off",
     overlayBackground: 'transparent',
-    overlayBlur: 2,
-    cacheMinutes: 0,
+    overlayBlur: 1,
+    cacheMinutes: 10,
     cacheKey: 'fsf_ab_clean',
     baitChecks: [150, 400, 800, 1500, 2500],
     probeTimeout: 6000,
     probeFailThreshold: 2,
+    probeRetryDelay: 500,
     control: 'https://www.gstatic.com/generate_204',
     probes: [
       'https://pubads.g.doubleclick.net/gampad/ads',
@@ -36,7 +39,7 @@
     ]
   };
 
-  var BOT_RE = /bot|crawl|spider|slurp|mediapartners|adsbot|googleother|inspectiontool|read-aloud|storebot|apis-google|feedfetcher|lighthouse|pagespeed|gtmetrix|pingdom|headless|phantomjs|yandex|baidu|duckduck|bingpreview|facebookexternalhit|ia_archiver|semrush|ahrefs|mj12|petalbot|applebot|whatsapp\/|pinterest\/|embedly|quora link preview|w3c_validator|validator/i;
+  var BOT_RE = /bot|crawl|spider|slurp|mediapartners|adsbot|googleother|inspectiontool|read-aloud|storebot|apis-google|feedfetcher|lighthouse|pagespeed|page speed|gtmetrix|pingdom|headless|phantomjs|yandex|baidu|duckduck|bingpreview|facebookexternalhit|ia_archiver|semrush|ahrefs|mj12|petalbot|applebot|whatsapp\/|pinterest\/|embedly|quora link preview|w3c_validator|validator|google-|googleweblight|chrome-lighthouse|prerender|puppeteer|playwright|selenium|python-requests|python-urllib|curl\/|wget|go-http-client|uptimerobot|statuscake|site24x7/i;
 
   var ua = '';
   try { ua = navigator.userAgent || ''; } catch (e) {}
@@ -159,6 +162,13 @@
     });
   }
 
+  function reachableStable(url) {
+    return reachable(url).then(function (r) {
+      if (r !== false) return r;
+      return wait(CONFIG.probeRetryDelay).then(function () { return reachable(url); });
+    });
+  }
+
   function detectNetwork() {
     if (typeof fetch !== 'function') return Promise.resolve(false);
     try { if (navigator.onLine === false) return Promise.resolve(false); } catch (e) {}
@@ -166,10 +176,14 @@
     return reachable(CONFIG.control).then(function (ok) {
       log('network: control', ok);
       if (ok !== true) return false;
-      return Promise.all(CONFIG.probes.map(reachable)).then(function (results) {
+      return Promise.all(CONFIG.probes.map(reachableStable)).then(function (results) {
         var failed = results.filter(function (r) { return r === false; }).length;
         log('network: probes', CONFIG.probes, results, 'failed', failed);
-        return failed >= CONFIG.probeFailThreshold;
+        if (failed < CONFIG.probeFailThreshold) return false;
+        return reachable(CONFIG.control).then(function (again) {
+          log('network: control recheck', again);
+          return again === true;
+        });
       });
     });
   }
@@ -194,21 +208,22 @@
     var id = '#' + CONFIG.modalId;
     var blurRule = CONFIG.overlayBlur ? '-webkit-backdrop-filter:blur(' + CONFIG.overlayBlur + 'px);backdrop-filter:blur(' + CONFIG.overlayBlur + 'px);' : '';
     var css = [
-      id + '{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:none;align-items:center;justify-content:center;background:' + CONFIG.overlayBackground + '!important;' + blurRule + 'z-index:2147483647!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden!important;overscroll-behavior:none;touch-action:none;margin:0;padding:0}',
+      id + '{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:none;align-items:center;justify-content:center;background:' + CONFIG.overlayBackground + '!important;' + blurRule + 'z-index:2147483646!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden!important;overscroll-behavior:none;touch-action:none;margin:0;padding:0}',
       id + '.fsf-show{display:flex!important;visibility:visible!important;opacity:1!important}',
       id + ':before,' + id + ':after{content:"";position:absolute;width:700px;height:700px;max-width:90vw;max-height:90vw;border-radius:50%;opacity:.14;pointer-events:none}',
       id + ':before{background:radial-gradient(circle,#00e5ff,transparent 60%);left:-15%;top:-10%;animation:fsf-drift 12s ease-in-out infinite alternate}',
       id + ':after{background:radial-gradient(circle,#ff00cc,transparent 60%);right:-15%;bottom:-10%;animation:fsf-drift 10s ease-in-out infinite alternate}',
-      id + ' .fsf-box{position:relative;z-index:1;box-sizing:border-box;width:90%;max-width:440px;max-height:90vh;overflow:auto;padding:40px 28px 32px;text-align:center;background:rgba(15,23,42,.92);border:1px solid rgba(255,255,255,.12);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(0,229,255,.18);animation:fsf-pop .45s cubic-bezier(.16,1,.3,1);outline:none}',
+      id + ' .fsf-box{position:relative;z-index:1;box-sizing:border-box;width:90%;max-width:440px;max-height:90vh;overflow:auto;touch-action:pan-y;padding:40px 28px 32px;text-align:center;background:rgba(15,23,42,.92);border:1px solid rgba(255,255,255,.12);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(0,229,255,.18);animation:fsf-pop .45s cubic-bezier(.16,1,.3,1);outline:none}',
       id + ' .fsf-logo{display:block;width:220px;max-width:70%;height:auto;margin:0 auto 18px;filter:drop-shadow(0 0 16px rgba(0,229,255,.8))}',
       id + ' .fsf-title{margin:0 0 10px;font-size:24px;font-weight:700;line-height:1.3;letter-spacing:-.3px;color:#fff}',
       id + ' .fsf-text{margin:0 0 12px;font-size:14.5px;line-height:1.65;color:#cbd5e1}',
       id + ' .fsf-hint{margin:0 0 24px;font-size:12.5px;line-height:1.55;color:#94a3b8}',
-      id + ' .fsf-btn{display:block;box-sizing:border-box;width:100%;padding:13px 24px;border:0;border-radius:12px;font:600 15px/1.2 inherit;font-family:inherit;color:#fff;cursor:pointer;background:linear-gradient(135deg,#00b8d4,#d500b0);box-shadow:0 0 22px rgba(255,0,204,.35);transition:transform .2s,box-shadow .2s}',
+      id + ' .fsf-btn{display:block;box-sizing:border-box;width:100%;padding:13px 24px;border:0;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;line-height:1.2;color:#fff;cursor:pointer;background:linear-gradient(135deg,#00b8d4,#d500b0);box-shadow:0 0 22px rgba(255,0,204,.35);transition:transform .2s,box-shadow .2s}',
       id + ' .fsf-btn:hover,' + id + ' .fsf-btn:focus-visible{transform:translateY(-2px);box-shadow:0 0 32px rgba(0,229,255,.6);outline:2px solid #fff;outline-offset:2px}',
       id + ' .fsf-progress{height:4px;margin-top:18px;overflow:hidden;border-radius:20px;background:#1e293b}',
       id + ' .fsf-progress-bar{width:100%;height:100%;background:linear-gradient(90deg,#00e5ff,#ff00cc);animation:fsf-slide 3s linear infinite}',
       'html.fsf-lock,html.fsf-lock body{overflow:hidden!important}',
+      'html.fsf-lock{scrollbar-gutter:stable}',
       '@keyframes fsf-drift{from{transform:translateY(-40px)}to{transform:translateY(40px)}}',
       '@keyframes fsf-pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}',
       '@keyframes fsf-slide{from{transform:translateX(-100%)}to{transform:translateX(100%)}}',
@@ -236,6 +251,7 @@
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-labelledby', CONFIG.modalId + '-title');
     modal.setAttribute('aria-describedby', CONFIG.modalId + '-text');
+    modal.setAttribute('data-nosnippet', '');
 
     var box = node('div', 'fsf-box');
     box.tabIndex = -1;
@@ -246,6 +262,8 @@
       img.width = 220;
       img.height = 73;
       img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', function () { img.style.display = 'none'; });
       img.src = CONFIG.logo;
       box.appendChild(img);
     }
@@ -359,6 +377,11 @@
     else setTimeout(run, 1200);
   }
 
-  if (document.readyState === 'complete') whenIdle();
-  else window.addEventListener('load', whenIdle, { once: true });
+  function start() {
+    if (document.readyState === 'complete') whenIdle();
+    else window.addEventListener('load', whenIdle, { once: true });
+  }
+
+  if (document.prerendering) document.addEventListener('prerenderingchange', start, { once: true });
+  else start();
 })();
