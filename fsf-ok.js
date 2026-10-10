@@ -1,6 +1,6 @@
 /**
  * =========================================================
- * Script Anti-AdBlock v2.2.0
+ * Script Anti-AdBlock v2.2.2
  * Website : https://www.arieffservicecenter.com
  * Author  : Free Support Files (FSF)
  * Proteksi: uBlock Origin, AdGuard and Other
